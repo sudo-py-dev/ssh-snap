@@ -1,0 +1,40 @@
+[package]
+name = "ssh-snap"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+gtk4 = { version = "0.11.0", features = ["v4_12"] }
+libadwaita = { version = "0.9.1", features = ["v1_5"] }
+vte4 = "0.10.0"
+keyring = "3.6.3"
+pam = "0.7.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "2.0.11"
+tokio = { version = "1", features = ["full"] }
+directories = "6.0.0"
+glib = "0.22.3"
+gio = "0.22.2"
+pango = "0.22.0"
+argon2 = "0.5.3"
+aes-gcm = "0.10.3"
+rand = "0.8.5"
+secrecy = { version = "0.8.0", features = ["serde"] }
+zeroize = "1.8.1"
+hex = "0.4.3"
+uuid = { version = "1.23.0", features = ["v4", "serde"] }
+simple_logger = "5.2.0"
+log = "0.4.29"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+overflow-checks = true
