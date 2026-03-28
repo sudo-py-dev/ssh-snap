@@ -22,7 +22,6 @@ pub struct Window {
     pub add_button: gtk::Button,
     pub search_button: gtk::ToggleButton,
     pub layout_toggle: gtk::ToggleButton,
-    pub _menu_button: gtk::MenuButton,
 }
 
 impl Window {
@@ -103,7 +102,7 @@ impl Window {
         toolbar_view.add_top_bar(&header_bar);
         window.set_content(Some(&toolbar_view));
         
-        Self { window, list_box, split_view, sidebar_stack, terminal_stack, status_page, connecting_page, dashboard_view, dashboard_flow, dashboard_stack, main_stack, add_button, search_button, layout_toggle, _menu_button: menu_button }
+        Self { window, list_box, split_view, sidebar_stack, terminal_stack, status_page, connecting_page, dashboard_view, dashboard_flow, dashboard_stack, main_stack, add_button, search_button, layout_toggle }
     }
 
     fn create_action_buttons(&self, is_active: bool) -> (gtk::Button, gtk::Button, gtk::Button) {
@@ -115,15 +114,15 @@ impl Window {
         )
     }
 
-    pub fn add_connection_row(&self, conn: &SshProfile, is_active: bool) -> (gtk::Button, gtk::Button, gtk::Button) {
+    pub fn add_connection_row(&self, conn: &SshProfile, is_active: bool) -> (adw::ActionRow, gtk::Button, gtk::Button, gtk::Button) {
         let (c, e, d) = self.create_action_buttons(is_active);
         let row = adw::ActionRow::builder().title(&conn.name).subtitle(&format!("{}@{}:{}", conn.username, conn.host, conn.port)).selectable(true).build();
         row.add_suffix(&c); row.add_suffix(&e); row.add_suffix(&d);
         self.list_box.append(&row);
-        (c, e, d)
+        (row, c, e, d)
     }
 
-    pub fn add_dashboard_card(&self, conn: &SshProfile, is_active: bool) -> (gtk::Button, gtk::Button, gtk::Button) {
+    pub fn add_dashboard_card(&self, conn: &SshProfile, is_active: bool) -> (gtk::Frame, gtk::Button, gtk::Button, gtk::Button) {
         let (c, e, d) = self.create_action_buttons(is_active);
         let card_box = gtk::Box::builder().orientation(gtk::Orientation::Vertical).spacing(8).margin_top(12).margin_bottom(12).margin_start(12).margin_end(12).build();
         let icon = gtk::Image::from_icon_name(if is_active { "network-offline-symbolic" } else { "network-server-symbolic" });
@@ -135,19 +134,26 @@ impl Window {
         footer.append(&c); footer.append(&e); footer.append(&d);
         card_box.append(&footer);
 
-        self.dashboard_flow.append(&gtk::Frame::builder().child(&card_box).css_classes(["card"]).build());
-        (c, e, d)
+        let frame = gtk::Frame::builder().child(&card_box).css_classes(["card"]).build();
+        self.dashboard_flow.append(&frame);
+        (frame, c, e, d)
     }
 
     pub fn clear_connections(&self) {
         while let Some(child) = self.list_box.first_child() { self.list_box.remove(&child); }
     }
 
+    pub fn clear_dashboard(&self) {
+        while let Some(child) = self.dashboard_flow.first_child() { self.dashboard_flow.remove(&child); }
+    }
+
     pub fn toggle_sidebar(&self) { self.split_view.set_collapsed(!self.split_view.is_collapsed()); }
 
     pub fn show_terminal(&self, conn_id: &str, terminal: &vte::Terminal) {
-        if terminal.parent().is_none() { self.terminal_stack.add_titled(terminal, Some(conn_id), conn_id); }
-        self.terminal_stack.set_visible_child(terminal);
+        if terminal.parent().is_none() {
+             self.terminal_stack.add_titled(terminal, Some(conn_id), conn_id);
+        }
+        self.terminal_stack.set_visible_child_name(conn_id);
     }
 
     pub fn show_status_page(&self) { self.terminal_stack.set_visible_child_name("status"); }
@@ -155,6 +161,23 @@ impl Window {
     pub fn show_connecting(&self, conn_name: &str) {
         self.connecting_page.set_title(&format!("Connecting to {}...", conn_name));
         self.terminal_stack.set_visible_child_name("connecting");
+    }
+
+    pub fn select_connection_row(&self, index: i32) {
+        if index >= 0 {
+            if let Some(row) = self.list_box.row_at_index(index) {
+                self.list_box.select_row(Some(&row));
+                row.grab_focus();
+            }
+        } else {
+            self.list_box.select_row(None::<&gtk::ListBoxRow>);
+        }
+    }
+
+    pub fn select_connection_row_by_id(&self, profiles: &[crate::models::SshProfile], id: &uuid::Uuid) {
+        if let Some(index) = profiles.iter().position(|p| p.id == *id) {
+            self.select_connection_row(index as i32);
+        }
     }
 }
 

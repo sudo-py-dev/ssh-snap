@@ -6,16 +6,16 @@ use gtk::prelude::*;
 use adw::prelude::*;
 use vte::prelude::*;
 
-use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std::rc::Rc;
-use secrecy::SecretString;
+use std::sync::{Arc, RwLock};
 
+use secrecy::SecretString;
 use ssh_snap::app::AppState;
-use ssh_snap::ui::window::{Window, create_terminal};
-use ssh_snap::ui::dialogs::add_dialog::AddConnectionDialog;
-use ssh_snap::models::SshProfile;
 use ssh_snap::core::ssh::spawn_ssh_in_terminal;
+use ssh_snap::models::SshProfile;
+use ssh_snap::ui::dialogs::add_dialog::AddConnectionDialog;
+use ssh_snap::ui::window::{create_terminal, Window};
 
 #[tokio::main]
 async fn main() -> glib::ExitCode {
@@ -74,11 +74,11 @@ async fn main() -> glib::ExitCode {
         }
     });
     
-    setup_actions(&app, app_state.clone(), active_terminals.clone());
+    setup_actions(&app);
     app.run()
 }
 
-fn setup_actions(app: &adw::Application, _: Arc<AppState>, _: Arc<RwLock<HashMap<uuid::Uuid, vte::Terminal>>>) {
+fn setup_actions(app: &adw::Application) {
     let help_action = gio::SimpleAction::new("help", None);
     help_action.connect_activate(move |_, _| {
         let help_window = adw::Window::builder()
@@ -120,7 +120,7 @@ fn setup_actions(app: &adw::Application, _: Arc<AppState>, _: Arc<RwLock<HashMap
         if let Some(app) = app_weak.upgrade() {
             let dialog = adw::AboutDialog::builder()
                 .application_name("SshSnap")
-                .version("1.0.0")
+                .version("1.0.1")
                 .developer_name("sudo-py-dev")
                 .comments("A modern SSH connection manager for Linux.")
                 .build();
@@ -158,7 +158,24 @@ fn build_ui(app: &adw::Application, state: Arc<AppState>, active_terminals: Arc<
     let t_select = active_terminals.clone();
     window.list_box.connect_row_activated(move |_, row| {
         if let Some(p) = s_select.get_profile_at(row.index() as usize) {
-            initiate_ssh_snapion(w_select.clone(), &p, s_select.clone(), t_select.clone());
+            initiate_ssh_session(w_select.clone(), &p, s_select.clone(), t_select.clone());
+        }
+    });
+
+    let s_nav = state.clone();
+    let w_nav = window.clone();
+    let t_nav = active_terminals.clone();
+    window.list_box.connect_row_selected(move |_, row| {
+        if let Some(row) = row {
+            if let Some(p) = s_nav.get_profile_at(row.index() as usize) {
+                // Only switch if already active
+                if let Ok(terms) = t_nav.read() {
+                    if let Some(term) = terms.get(&p.id) {
+                        w_nav.show_terminal(&p.id.to_string(), term);
+                        term.grab_focus();
+                    }
+                }
+            }
         }
     });
 
@@ -262,11 +279,17 @@ fn setup_dialog_file_browse(dialog: &Rc<AddConnectionDialog>) {
     });
 }
 
-fn initiate_ssh_snapion(window: Rc<Window>, profile: &SshProfile, state: Arc<AppState>, terminals: Arc<RwLock<HashMap<uuid::Uuid, vte::Terminal>>>) {
+fn initiate_ssh_session(window: Rc<Window>, profile: &SshProfile, state: Arc<AppState>, terminals: Arc<RwLock<HashMap<uuid::Uuid, vte::Terminal>>>) {
     if let Some(term) = terminals.read().ok().and_then(|t| t.get(&profile.id).cloned()) {
         window.show_terminal(&profile.id.to_string(), &term);
         term.grab_focus();
         window.main_stack.set_visible_child_name("sidebar");
+        
+        // Sync sidebar selection
+        let profiles = state.data.read().map(|d| d.profiles.clone()).unwrap_or_default();
+        if let Some(index) = profiles.iter().position(|p| p.id == profile.id) {
+            window.select_connection_row(index as i32);
+        }
         return;
     }
 
@@ -282,10 +305,13 @@ fn initiate_ssh_snapion(window: Rc<Window>, profile: &SshProfile, state: Arc<App
 
     let window_handle = window.clone();
     let conn_id = profile.id;
+    let state_timeout = state.clone();
     glib::timeout_add_local_once(std::time::Duration::from_millis(500), {
         let terminal = terminal.clone();
         move || {
             window_handle.show_terminal(&conn_id.to_string(), &terminal);
+            let profiles = state_timeout.data.read().map(|d| d.profiles.clone()).unwrap_or_default();
+            window_handle.select_connection_row_by_id(&profiles, &conn_id);
             terminal.grab_focus();
         }
     });
@@ -311,20 +337,24 @@ fn initiate_ssh_snapion(window: Rc<Window>, profile: &SshProfile, state: Arc<App
 }
 
 fn handle_connection_action(profile: &SshProfile, window: Rc<Window>, state: Arc<AppState>, terminals: Arc<RwLock<HashMap<uuid::Uuid, vte::Terminal>>>) {
-    let term_to_remove = if let Ok(mut t) = terminals.write() { t.remove(&profile.id) } else { None };
+    let is_active = terminals.read().map(|t| t.contains_key(&profile.id)).unwrap_or(false);
     
-    if let Some(term) = term_to_remove {
-        window.terminal_stack.remove(&term);
-        window.show_status_page();
-        refresh_ui(window, state, terminals);
+    if is_active {
+        // If it's already active, clicking the button STOPS it
+        let term_to_remove = if let Ok(mut t) = terminals.write() { t.remove(&profile.id) } else { None };
+        if let Some(term) = term_to_remove {
+            window.terminal_stack.remove(&term);
+            window.show_status_page();
+            refresh_ui(window, state, terminals);
+        }
     } else {
-        initiate_ssh_snapion(window, profile, state, terminals);
+        initiate_ssh_session(window, profile, state, terminals);
     }
 }
 
 fn refresh_ui(window: Rc<Window>, state: Arc<AppState>, terminals: Arc<RwLock<HashMap<uuid::Uuid, vte::Terminal>>>) {
     window.clear_connections();
-    while let Some(child) = window.dashboard_flow.first_child() { window.dashboard_flow.remove(&child); }
+    window.clear_dashboard();
 
     let profiles = state.data.read().map(|d| d.profiles.clone()).unwrap_or_default();
     if profiles.is_empty() {
@@ -338,21 +368,43 @@ fn refresh_ui(window: Rc<Window>, state: Arc<AppState>, terminals: Arc<RwLock<Ha
     window.status_page.set_description(Some("Select a connection from the sidebar to open a terminal."));
     window.dashboard_stack.set_visible_child_name("flow");
 
-    for profile in profiles {
+    let current_visible = window.terminal_stack.visible_child_name().map(|s| s.to_string());
+
+    for (index, profile) in profiles.into_iter().enumerate() {
         let is_active = terminals.read().map(|t| t.contains_key(&profile.id)).unwrap_or(false);
-        let (s_conn, s_edit, s_del) = window.add_connection_row(&profile, is_active);
-        let (c_conn, c_edit, c_del) = window.add_dashboard_card(&profile, is_active);
+        let profile_id_str = profile.id.to_string();
+        
+        let (_row, s_conn, s_edit, s_del) = window.add_connection_row(&profile, is_active);
+        let (card, c_conn, c_edit, c_del) = window.add_dashboard_card(&profile, is_active);
+
+        // Sidebar row activation (clicking the row itself)
+        // Handled by list_box.connect_row_activated in build_ui
+
+        // Dashboard card activation (clicking the card itself)
+        let gesture = gtk::GestureClick::new();
+        let p_card = profile.clone(); let w_card = window.clone(); let s_card = state.clone(); let t_card = terminals.clone();
+        gesture.connect_released(move |_, _, _, _| {
+            initiate_ssh_session(w_card.clone(), &p_card, s_card.clone(), t_card.clone());
+        });
+        card.add_controller(gesture);
 
         for (cb, eb, db) in [(s_conn, s_edit, s_del), (c_conn, c_edit, c_del)] {
             let p = profile.clone(); let w = window.clone(); let s = state.clone(); let t = terminals.clone();
             cb.connect_clicked({ let p = p.clone(); let w = w.clone(); let s = s.clone(); let t = t.clone(); move |_| handle_connection_action(&p, w.clone(), s.clone(), t.clone()) });
             eb.connect_clicked({ let p = p.clone(); let w = w.clone(); let s = s.clone(); let t = t.clone(); move |_| show_edit_dialog(w.clone(), s.clone(), p.clone(), t.clone()) });
-                db.connect_clicked({ let p = p.clone(); let w = w.clone(); let s = s.clone(); let t = t.clone(); move |_| {
-                    if let Err(e) = s.delete_profile(&p.id) { eprintln!("Delete error: {}", e); return; }
-                    let term = if let Ok(mut t_mut) = t.write() { t_mut.remove(&p.id) } else { None };
-                    if let Some(term) = term { w.terminal_stack.remove(&term); }
-                    refresh_ui(w.clone(), s.clone(), t.clone());
-                }});
+            db.connect_clicked({ let p = p.clone(); let w = w.clone(); let s = s.clone(); let t = t.clone(); move |_| {
+                if let Err(e) = s.delete_profile(&p.id) { eprintln!("Delete error: {}", e); return; }
+                let term = if let Ok(mut t_mut) = t.write() { t_mut.remove(&p.id) } else { None };
+                if let Some(term) = term { w.terminal_stack.remove(&term); }
+                refresh_ui(w.clone(), s.clone(), t.clone());
+            }});
+        }
+
+        // Restore selection if this was the visible terminal
+        if let Some(ref visible_id) = current_visible {
+            if visible_id == &profile_id_str {
+                window.select_connection_row(index as i32);
+            }
         }
     }
 }

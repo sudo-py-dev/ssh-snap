@@ -1,7 +1,7 @@
 [package]
 name = "ssh-snap"
-version = "1.0.0"
-edition = "2026"
+version = "1.0.1"
+edition = "2024"
 description = "A modern, secure GNOME SSH connection manager with terminal integration"
 
 [dependencies]
