@@ -58,3 +58,9 @@ assets = [
     ["assets/icons/ssh-snap-32.png", "usr/share/icons/hicolor/32x32/apps/ssh-snap.png", "644"],
     ["assets/icons/ssh-snap-16.png", "usr/share/icons/hicolor/16x16/apps/ssh-snap.png", "644"],
 ]
+
+[package.metadata.appimage]
+assets = [
+    "assets/icons/ssh-snap-512.png",
+    "assets/ssh-snap.desktop",
+]
