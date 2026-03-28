@@ -1,71 +1,76 @@
-# SshSnap
+<p align="center">
+  <img src="assets/app_icon.png" width="128" height="128" alt="ssh-snap Logo">
+</p>
 
-A modern, high-fidelity SSH connection manager designed exclusively for the Linux desktop (GNOME). Built with **Rust**, **GTK4**, and **Libadwaita**, it provides a seamless, secure, and professional experience for managing remote server access.
+# 🚀 ssh-snap
 
-![SshSnap UI](/assets/image.png)
+**A modern, clean SSH manager built for the GNOME desktop.**  
+Built with 🦀 **Rust**, **GTK4**, and **Libadwaita**, `ssh-snap` is fast, safe, and easy to use.
 
-## Features
+---
 
-### 🖥️ Native GNOME Experience
+## ✨ Key Features
 
-- **Libadwaita Design**: Follows the GNOME HIG (Human Interface Guidelines) for a 100% native look and feel.
-- **Adaptive UI**: Seamlessly transitions between a **Sidebar (List)** and **Dashboard (Grid)** layout.
-- **Dark Mode Support**: Automatically respects your system-wide theme and color scheme.
+### 🎨 Native Feel
+*   **Modern Design**: Looks and feels like a native part of GNOME.
+*   **Simple Layouts**: Easily switch between a **Dashboard** 📊 and a **Sidebar** 🗂️.
+*   **Dark Mode**: Automatically matches your system colors.
 
-### 🔒 Enterprise-Grade Security
+### 🔐 Safe and Sound
+*   **Strong Encryption**: Your data is securely locked with **AES-256-GCM** 🛡️.
+*   **Trusted Security**: Uses **Argon2id** to make sure your keys are extra safe.
+*   **Keychain Ready**: Saves your passwords safely in your system's built-in key storage 🔑.
+*   **Identity Check**: Works with standard Linux tools to verify who you are.
 
-- **At-Rest Encryption**: All connection profiles are encrypted with **AES-256-GCM**.
-- **Argon2id KDF**: Secure password-to-key derivation ensures your data is cryptographically protected by your system password.
-- **PAM Authentication**: Integrates with Linux's native **Pluggable Authentication Modules** for identity verification.
-- **High-Fidelity Auth**: Real, official-style authentication prompts that mimic the GNOME Shell experience.
+### ⚡ Built-in Terminal
+*   **Fast Connection**: A smooth, snappy terminal right inside the app ⌨️.
+*   **Stay Organized**: Keep all your server sessions open and easy to find in one place.
 
-### ⌨️ Integrated Terminal
+---
 
-- **VTE4 Integration**: Fast, reliable, and native terminal emulation built directly into the app.
-- **Persistent Sessions**: Your terminals stay active as long as the application is open.
+## 📦 Installation
 
-## Installation
-
-### Prerequisites
-
-Ensure you have the following system dependencies installed:
-
-- `gtk4`
-- `libadwaita-1`
-- `vte4`
-- `libpam0g-dev`
-- `libsecret-1-dev`
-
-### Building from Source
+### 📥 Debian / Ubuntu (Recommended)
+You can now install the pre-compiled `.deb` package directly:
 
 ```bash
-# Clone the repository
+sudo dpkg -i target/debian/ssh-snap_1.0.0-1_amd64.deb
+sudo apt-get install -f  # Install missing dependencies
+```
+
+### 🛠️ Building from Source
+Ensure you have the required development headers: `libgtk-4-dev`, `libadwaita-1-dev`, `libvte-2.91-gtk4-dev`, `libpam0g-dev`.
+
+```bash
+# Clone and Build
 git clone https://github.com/sudo-py-dev/ssh-snap.git
-
-# Navigate to the project directory
 cd ssh-snap
-
-# Build the project
 cargo build --release
 
-# Run the application
+# Run
 ./target/release/ssh-snap
 ```
 
-## Usage
+---
 
-1. **Add Connection**: Press the **+** button in the header bar to create your first server profile.
-2. **Switch Layouts**: Use the grid icon to toggle between a server dashboard and a quick-access sidebar.
-3. **App Lock**: Enable high-security encryption in **Preferences > Security** to protect your profiles with your system password.
+## 🚀 Quick Start
+1.  **Add a Server**: Click the **+** (Plus) button in the header bar.
+2.  **Authenticate**: Enter your credentials. If "Secure Store" is enabled, your data is AES-encrypted at rest.
+3.  **Connect**: Double-click any profile to launch an integrated SSH session immediately.
 
-## Project Structure
+---
 
-- `src/main.rs`: Application entry point and UI controller.
-- `src/core/storage.rs`: Secure storage engine (Argon2, AES, PAM).
-- `src/models.rs`: Data models for profiles and settings.
-- `src/ui/window.rs`: Main Adwaita window construction.
-- `src/ui/dialogs/`: UI components for adding/editing connections.
+## 📂 Project Architecture
+*   `src/core/`: Security engine (Encryption, PAM, Keyring).
+*   `src/ui/`: GTK4/Adwaita components and window management.
+*   `src/models/`: Robust data structures and persistence logic.
 
-## License
+---
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📜 License
+Licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+---
+<p align="center">
+  Made with ❤️ for the Linux Community.
+</p>

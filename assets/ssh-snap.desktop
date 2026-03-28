@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=SSH Snap
+Comment=Securely manage your SSH connections
+Exec=ssh-snap
+Icon=ssh-snap
+Terminal=false
+Type=Application
+Categories=Network;RemoteAccess;GTK;
+Keywords=ssh;terminal;connect;
+StartupNotify=true

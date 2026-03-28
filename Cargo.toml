@@ -1,7 +1,8 @@
 [package]
 name = "ssh-snap"
 version = "1.0.0"
-edition = "2024"
+edition = "2026"
+description = "A modern, secure GNOME SSH connection manager with terminal integration"
 
 [dependencies]
 gtk4 = { version = "0.11.0", features = ["v4_12"] }
@@ -38,3 +39,22 @@ codegen-units = 1
 panic = "abort"
 strip = true
 overflow-checks = true
+
+[package.metadata.deb]
+maintainer = "sudo-py-dev <admin@ssh-snap.io>"
+copyright = "2026, sudo-py-dev"
+license-file = ["LICENSE", "0"]
+depends = "$auto, libgtk-4-1, libadwaita-1-0, libvte-2.91-gtk4-0"
+section = "net"
+priority = "optional"
+assets = [
+    ["target/release/ssh-snap", "usr/bin/ssh-snap", "755"],
+    ["assets/ssh-snap.desktop", "usr/share/applications/ssh-snap.desktop", "644"],
+    ["assets/icons/ssh-snap-512.png", "usr/share/icons/hicolor/512x512/apps/ssh-snap.png", "644"],
+    ["assets/icons/ssh-snap-256.png", "usr/share/icons/hicolor/256x256/apps/ssh-snap.png", "644"],
+    ["assets/icons/ssh-snap-128.png", "usr/share/icons/hicolor/128x128/apps/ssh-snap.png", "644"],
+    ["assets/icons/ssh-snap-64.png", "usr/share/icons/hicolor/64x64/apps/ssh-snap.png", "644"],
+    ["assets/icons/ssh-snap-48.png", "usr/share/icons/hicolor/48x48/apps/ssh-snap.png", "644"],
+    ["assets/icons/ssh-snap-32.png", "usr/share/icons/hicolor/32x32/apps/ssh-snap.png", "644"],
+    ["assets/icons/ssh-snap-16.png", "usr/share/icons/hicolor/16x16/apps/ssh-snap.png", "644"],
+]
